@@ -19,9 +19,6 @@ const vertexShader = `
   varying float vAlpha;
   varying vec3 vColor;
 
-  // Simple noise function
-  float hash(float n) { return fract(sin(n) * 43758.5453123); }
-
   void main() {
     // 1. Growth Logic
     // Normalize height based on actual tree height
@@ -50,13 +47,11 @@ const vertexShader = `
 
     // 3. Organic Movement (Wind/Breathing)
     // Only apply when fully grown or significantly grown
-    // SLOWED DOWN: Reduced time multipliers for ethereal feel
     float windStrength = 0.1 * heightProgress;
     pos.x += sin(uTime * 0.3 + pos.y * 0.5) * windStrength;
     pos.z += cos(uTime * 0.2 + pos.y * 0.5) * windStrength;
     
     // 4. Sparkle/Floating effect
-    // SLOWED DOWN: Slower breathing vertical movement
     pos.y += sin(uTime * 0.5 + aRandom * 10.0) * 0.05;
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
@@ -104,8 +99,7 @@ export const ParticleTree: React.FC = () => {
   const meshRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   
-  // Use remote path pointing to raw github content
-  // FIXED URL: Removed 'refs/heads/'
+  // Load Object
   const obj = useLoader(OBJLoader, 'https://raw.githubusercontent.com/icedtinat/lumina-assets/main/tree.obj');
 
   // Configuration
@@ -133,8 +127,7 @@ export const ParticleTree: React.FC = () => {
     // 2. Prepare Geometry
     const geometry = mesh.geometry.clone();
 
-    // Transform sequence:
-    // A. Rotate upright
+    // A. Rotate upright (Z-up to Y-up fix)
     geometry.rotateX(-Math.PI / 2);
     
     // B. Center at 0,0,0
@@ -150,7 +143,6 @@ export const ParticleTree: React.FC = () => {
       height = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
       
       // E. Shift UP so bottom is at Y=0
-      // Since it's centered, min.y is -height/2. We add height/2 to bring min to 0.
       geometry.translate(0, height / 2, 0);
     }
     

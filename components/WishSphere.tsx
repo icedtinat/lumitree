@@ -6,20 +6,17 @@ import { shaderMaterial } from '@react-three/drei';
 import { useWishStore } from '../store';
 
 // --------------------------------------------------------
-// 1. HELPER FUNCTIONS (From new ParticleSphere code)
+// HELPER FUNCTIONS (From ball project)
 // --------------------------------------------------------
 
 const getUniqueWords = (text: string) => {
-  const cleanText = text.replace(/[.,;，,。 \n\t]/g, ' ');
-  const words = cleanText.split(' ').filter(w => w.length > 0);
-  return [...new Set(words)];
+  const cleanText = text.replace(/[.,;，,。 \n\t]/g, '');
+  return [...new Set(cleanText.split(''))];
 };
 
 const createWordTextureAtlas = (words: string[]) => {
   if (typeof document === 'undefined') return { texture: new THREE.Texture(), cols: 1, rows: 1 };
   
-  if (words.length === 0) return { texture: new THREE.Texture(), cols: 1, rows: 1 };
-
   const count = words.length;
   const cols = Math.ceil(Math.sqrt(count));
   const rows = Math.ceil(count / cols);
@@ -48,8 +45,8 @@ const createWordTextureAtlas = (words: string[]) => {
     const centerX = col * cellWidth + cellWidth / 2;
     const centerY = row * cellHeight + cellHeight / 2;
     
-    let fontSize = cellHeight * 0.75; 
-    ctx.font = `bold ${fontSize}px "Microsoft YaHei", "Arial", sans-serif`;
+    let fontSize = cellHeight * 0.75;
+    ctx.font = `bold ${fontSize}px "Microsoft YaHei", "PingFang SC", "Heiti SC", "SimHei", "Arial", sans-serif`;
     
     const metrics = ctx.measureText(word);
     const textWidth = metrics.width;
@@ -57,7 +54,7 @@ const createWordTextureAtlas = (words: string[]) => {
     
     if (textWidth > maxWidth) {
       fontSize = fontSize * (maxWidth / textWidth);
-      ctx.font = `bold ${fontSize}px "Microsoft YaHei", "Arial", sans-serif`;
+      ctx.font = `bold ${fontSize}px "Microsoft YaHei", "PingFang SC", "Heiti SC", "SimHei", "Arial", sans-serif`;
     }
     
     ctx.fillText(word, centerX, centerY);
@@ -70,7 +67,7 @@ const createWordTextureAtlas = (words: string[]) => {
 };
 
 // --------------------------------------------------------
-// 2. CUSTOM SHADER MATERIAL
+// CUSTOM SHADER MATERIAL (From ball project)
 // --------------------------------------------------------
 
 const ParticleShaderMaterial = shaderMaterial(
@@ -134,7 +131,7 @@ const ParticleShaderMaterial = shaderMaterial(
     
     void main() {
       vec2 uv = gl_PointCoord;
-      uv.y = 1.0 - uv.y; 
+      uv.y = 1.0 - uv.y;
       
       float cols = uAtlasGrid.x;
       float rows = uAtlasGrid.y;
@@ -160,7 +157,7 @@ const ParticleShaderMaterial = shaderMaterial(
 extend({ ParticleShaderMaterial });
 
 // --------------------------------------------------------
-// 3. COMPONENT
+// WISH SPHERE COMPONENT
 // --------------------------------------------------------
 
 interface WishSphereProps {
@@ -175,7 +172,7 @@ export const WishSphere: React.FC<WishSphereProps> = ({ id, text, color, positio
   const pointsRef = useRef<THREE.Points>(null!);
   const setFocusedWishId = useWishStore(state => state.setFocusedWishId);
 
-  // Animation: Trajectory from camera to tree (Retained from original code)
+  // Animation: Fly from camera to tree position
   const { pos } = useSpring({
     from: { pos: [0, 15, 30] },
     to: { pos: position },
@@ -183,40 +180,42 @@ export const WishSphere: React.FC<WishSphereProps> = ({ id, text, color, positio
     delay: 100,
   });
 
-  // Data Generation (Memoized)
+  // Process text into unique characters
   const uniqueWords = useMemo(() => getUniqueWords(text), [text]);
+  
+  // Generate texture atlas
   const { texture, cols, rows } = useMemo(() => createWordTextureAtlas(uniqueWords), [uniqueWords]);
   const atlasGrid = useMemo(() => new THREE.Vector2(cols, rows), [cols, rows]);
 
+  // Generate geometry data (matching ball project exactly)
   const { positions, colors, randoms, scales, wordIndexes } = useMemo(() => {
-    // New density and distribution logic from ParticleSphere.tsx
-    const count = 2000; // Moderate count for performance with sprites
-    const radius = 0.6; // Scale down from original 2.5 to fit on tree
-
+    const count = 5600;
+    const radius = 0.6; // Scaled down from ball's 3.0 to fit on tree
+    
     const positions = [];
     const colors = [];
     const randoms = [];
     const scales = [];
     const wordIndexes = [];
     
-    const cTop = new THREE.Color(color); // Use the wish color
-    const cBottom = new THREE.Color('#ffffff'); // White bottom
+    const cTop = new THREE.Color(color);
+    const cBottom = new THREE.Color('#FFFFFF');
     const tempColor = new THREE.Color();
 
-    let i = 0;
     while (positions.length < count * 3) {
+      // Random point on sphere
       const u = Math.random();
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
       
-      const r = radius * (0.95 + Math.random() * 0.1); 
+      const r = radius * (0.95 + Math.random() * 0.1);
 
       let x = r * Math.sin(phi) * Math.cos(theta);
       let y = r * Math.cos(phi);
       let z = r * Math.sin(phi) * Math.sin(theta);
       
-      // Density Logic (more at poles)
+      // Density logic: higher at poles
       const normalizedY = y / radius; 
       const densityVal = Math.abs(normalizedY);
       const densityProbability = 0.25 + 0.75 * Math.pow(densityVal, 2.5);
@@ -225,22 +224,21 @@ export const WishSphere: React.FC<WishSphereProps> = ({ id, text, color, positio
 
       positions.push(x, y, z);
       
-      // Color
+      // Color gradient from bottom (white) to top (wish color)
       const t = (normalizedY + 1) / 2;
       tempColor.copy(cBottom).lerp(cTop, t);
       colors.push(tempColor.r, tempColor.g, tempColor.b);
 
+      // Animation attributes
       randoms.push(Math.random(), Math.random(), Math.random());
       
-      // Scale
+      // Scale: sparse areas get larger particles
       const sizeBase = 2.5 - (densityVal * 1.5); 
       scales.push(sizeBase * (0.8 + Math.random() * 0.5));
       
-      // Word Index
+      // Random word index
       const wIdx = Math.floor(Math.random() * uniqueWords.length);
       wordIndexes.push(wIdx);
-      
-      i++;
     }
 
     return {
@@ -257,9 +255,10 @@ export const WishSphere: React.FC<WishSphereProps> = ({ id, text, color, positio
       materialRef.current.uTime = state.clock.elapsedTime;
     }
     if (pointsRef.current) {
-      pointsRef.current.rotation.y += delta * 0.2; // Rotate the wish sphere
+      // Slow rotation
+      pointsRef.current.rotation.y += delta * 0.05;
       
-      // Apply Spring position
+      // Apply spring position
       const currentPos = pos.get() as [number, number, number];
       pointsRef.current.position.set(currentPos[0], currentPos[1], currentPos[2]);
     }

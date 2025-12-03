@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, RefreshCw } from 'lucide-react'; // 引入了 RefreshCw 图标用于 Reseed
+import { Sparkles, X, RefreshCw, Send } from 'lucide-react'; // 引入了 RefreshCw 图标用于 Reseed
 import { clsx } from 'clsx';
 
 interface OverlayProps {
