@@ -1,68 +1,32 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, RefreshCw, Send } from 'lucide-react'; // 引入了 RefreshCw 图标用于 Reseed
+import { Sparkles, X, RefreshCw, Send } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useWishStore } from '../store';
 
 interface OverlayProps {
   onRegrow: () => void;
 }
 
-// 粒子风格图标组件 (保持不变)
-const ParticleIcon = ({ type, selected }: { type: 'ball' | 'star' | 'gift' | 'cane'; selected: boolean }) => {
-  return (
-    <div className={clsx(
-      "w-12 h-12 border-2 border-dotted transition-all duration-300 flex items-center justify-center cursor-pointer relative",
-      selected ? "border-orange-400 shadow-[0_0_15px_rgba(251,191,36,0.5)] scale-110" : "border-white/30 hover:border-white/60",
-      type === 'ball' && "rounded-full",
-      type === 'gift' && "rounded-md",
-      type === 'cane' && "rounded-t-3xl rounded-b-none",
-      type === 'star' && "rotate-45" // 简单的样式区分
-    )}>
-      {/* 选中时的内部填充 */}
-      <div className={clsx("w-full h-full opacity-50 transition-colors", selected ? "bg-orange-400/20" : "bg-transparent")} />
-    </div>
-  );
-};
-
 export const Overlay: React.FC<OverlayProps> = ({ onRegrow }) => {
-  const [isWishing, setIsWishing] = useState(false);
-  const [wishText, setWishText] = useState('');
-  const [selectedVessel, setSelectedVessel] = useState<'ball' | 'star' | 'gift' | 'cane'>('ball');
+  const { isWishing, setIsWishing, wishText, setWishText, addWish } = useWishStore();
+
+  const handleSubmit = () => {
+    if (wishText.trim()) {
+      addWish(wishText, 'Sphere');
+    }
+  };
 
   return (
-    <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-50 flex flex-col justify-between p-8 md:p-12 font-mono">
-      
-      {/* --- 头部区域 (来自 UIOverlay 的设计风格) --- */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1 }}
-        className="flex flex-col items-start space-y-2 pointer-events-auto"
-      >
-        <h1 className="text-white text-5xl md:text-7xl font-thin tracking-tighter drop-shadow-2xl">
-          LUMINA
-        </h1>
-        {/* 标志性的橙色渐变分割线 */}
-        <div className="h-0.5 w-24 bg-gradient-to-r from-orange-400 to-transparent opacity-80" />
-        <p className="text-orange-200 text-xs md:text-sm tracking-[0.2em] uppercase opacity-70 font-light">
-          The Digital Tree of Whispers
-        </p>
-      </motion.div>
+    <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-50 flex flex-col justify-end p-8 md:p-12 font-mono">
 
       {/* --- 底部区域 --- */}
-      <footer className="flex justify-between items-end w-full pointer-events-none">
-        
-        {/* 左下角：技术参数 (保留自原 Overlay) */}
-        <div className="hidden md:block text-white/30 text-[10px] md:text-xs font-mono pointer-events-auto space-y-1">
-          <p>VERTICES: 80,000</p>
-          <p>RENDER: R3F / GLSL / INSTANCED</p>
-          <p className="text-orange-400/50">INTERACTION: ENABLED</p>
-        </div>
+      <footer className="flex justify-end items-end w-full pointer-events-none">
 
         {/* 右下角：操作按钮组 */}
         <div className="flex gap-4 items-center pointer-events-auto">
             
-            {/* 1. Reseed 按钮 (原 Overlay 功能，样式微调适配新风格) */}
+            {/* 1. Reseed 按钮 */}
             <button 
               onClick={onRegrow}
               className="group flex items-center gap-2 px-4 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-orange-400/30 transition-all active:scale-95 backdrop-blur-sm"
@@ -90,7 +54,7 @@ export const Overlay: React.FC<OverlayProps> = ({ onRegrow }) => {
         </div>
       </footer>
 
-      {/* --- 全屏许愿弹窗 (样式优化：橙色/琥珀色系) --- */}
+      {/* --- 全屏许愿弹窗 (金色渐变风格) --- */}
       <AnimatePresence>
         {isWishing && (
           <motion.div
@@ -111,7 +75,7 @@ export const Overlay: React.FC<OverlayProps> = ({ onRegrow }) => {
               {/* Header */}
               <div className="flex justify-between items-start mb-8">
                 <div>
-                    <h2 className="text-3xl font-thin tracking-tighter text-white mb-2">Inject Energy</h2>
+                    <h2 className="text-3xl font-thin tracking-tighter text-white mb-2">Make a Wish</h2>
                     <div className="h-0.5 w-12 bg-orange-500" />
                 </div>
                 <button onClick={() => setIsWishing(false)} className="text-white/40 hover:text-white transition-colors">
@@ -133,19 +97,7 @@ export const Overlay: React.FC<OverlayProps> = ({ onRegrow }) => {
                   style={{ opacity: Math.min(wishText.length / 30, 0.6) }}
                 />
                 <div className="text-right text-xs text-orange-200/50 mt-2 font-mono tracking-widest">
-                    {wishText.length} / 100 ENERGY
-                </div>
-              </div>
-
-              {/* Vessel Selector */}
-              <div className="mb-8">
-                <p className="text-xs uppercase tracking-widest text-white/40 mb-4 font-bold">Select Vessel</p>
-                <div className="flex gap-4 justify-center">
-                    {(['ball', 'gift', 'star', 'cane'] as const).map((vessel) => (
-                        <div key={vessel} onClick={() => setSelectedVessel(vessel)}>
-                            <ParticleIcon type={vessel} selected={selectedVessel === vessel} />
-                        </div>
-                    ))}
+                    {wishText.length} / 100
                 </div>
               </div>
 
@@ -158,11 +110,7 @@ export const Overlay: React.FC<OverlayProps> = ({ onRegrow }) => {
                         : "bg-white/5 text-white/20 cursor-not-allowed border border-white/5"
                 )}
                 disabled={wishText.length === 0}
-                onClick={() => {
-                    console.log('Wish submitted:', { text: wishText, vessel: selectedVessel });
-                    setWishText('');
-                    setIsWishing(false);
-                }}
+                onClick={handleSubmit}
               >
                 <Send size={16} />
                 <span>Crystallize</span>

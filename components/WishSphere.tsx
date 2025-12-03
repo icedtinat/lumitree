@@ -6,7 +6,7 @@ import { shaderMaterial } from '@react-three/drei';
 import { useWishStore } from '../store';
 
 // --------------------------------------------------------
-// HELPER FUNCTIONS (From ball project)
+// HELPER FUNCTIONS
 // --------------------------------------------------------
 
 const getUniqueWords = (text: string) => {
@@ -67,7 +67,7 @@ const createWordTextureAtlas = (words: string[]) => {
 };
 
 // --------------------------------------------------------
-// CUSTOM SHADER MATERIAL (From ball project)
+// CUSTOM SHADER MATERIAL
 // --------------------------------------------------------
 
 const ParticleShaderMaterial = shaderMaterial(
@@ -187,10 +187,12 @@ export const WishSphere: React.FC<WishSphereProps> = ({ id, text, color, positio
   const { texture, cols, rows } = useMemo(() => createWordTextureAtlas(uniqueWords), [uniqueWords]);
   const atlasGrid = useMemo(() => new THREE.Vector2(cols, rows), [cols, rows]);
 
-  // Generate geometry data (matching ball project exactly)
+  // Generate geometry data - SPIRAL PATTERN WITH GRADIENT
   const { positions, colors, randoms, scales, wordIndexes } = useMemo(() => {
-    const count = 5600;
-    const radius = 0.6; // Scaled down from ball's 3.0 to fit on tree
+    const count = 400;       // 粒子数量
+    const radius = 1;       // 球体半径
+    const spirals = 6;       // 螺旋线数量
+    const turnsPerSpiral = 6; // 每条螺旋转几圈
     
     const positions = [];
     const colors = [];
@@ -198,47 +200,54 @@ export const WishSphere: React.FC<WishSphereProps> = ({ id, text, color, positio
     const scales = [];
     const wordIndexes = [];
     
-    const cTop = new THREE.Color(color);
-    const cBottom = new THREE.Color('#FFFFFF');
+    // 渐变颜色设置
+    const cTop = new THREE.Color(color);        // 顶部：愿望颜色
+    const cBottom = new THREE.Color('#FFFFFF'); // 底部：白色
     const tempColor = new THREE.Color();
+    
+    const particlesPerSpiral = Math.floor(count / spirals);
 
-    while (positions.length < count * 3) {
-      // Random point on sphere
-      const u = Math.random();
-      const v = Math.random();
-      const theta = 2 * Math.PI * u;
-      const phi = Math.acos(2 * v - 1);
+    for (let s = 0; s < spirals; s++) {
+      // 每条螺旋的起始角度偏移
+      const spiralOffset = (s / spirals) * Math.PI * 2;
       
-      const r = radius * (0.95 + Math.random() * 0.1);
-
-      let x = r * Math.sin(phi) * Math.cos(theta);
-      let y = r * Math.cos(phi);
-      let z = r * Math.sin(phi) * Math.sin(theta);
-      
-      // Density logic: higher at poles
-      const normalizedY = y / radius; 
-      const densityVal = Math.abs(normalizedY);
-      const densityProbability = 0.25 + 0.75 * Math.pow(densityVal, 2.5);
-      
-      if (Math.random() > densityProbability) continue;
-
-      positions.push(x, y, z);
-      
-      // Color gradient from bottom (white) to top (wish color)
-      const t = (normalizedY + 1) / 2;
-      tempColor.copy(cBottom).lerp(cTop, t);
-      colors.push(tempColor.r, tempColor.g, tempColor.b);
-
-      // Animation attributes
-      randoms.push(Math.random(), Math.random(), Math.random());
-      
-      // Scale: sparse areas get larger particles
-      const sizeBase = 2.5 - (densityVal * 1.5); 
-      scales.push(sizeBase * (0.8 + Math.random() * 0.5));
-      
-      // Random word index
-      const wIdx = Math.floor(Math.random() * uniqueWords.length);
-      wordIndexes.push(wIdx);
+      for (let i = 0; i < particlesPerSpiral; i++) {
+        // t 从 0 到 1，代表从南极到北极
+        const t = i / particlesPerSpiral;
+        
+        // phi: 从底部到顶部 (π 到 0)
+        const phi = Math.PI * (1 - t);
+        
+        // theta: 螺旋角度
+        const theta = spiralOffset + t * turnsPerSpiral * Math.PI * 2;
+        
+        // 添加一点随机抖动
+        const jitter = 0.05;
+        const r = radius * (1 + (Math.random() - 0.5) * jitter);
+        
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.cos(phi);
+        const z = r * Math.sin(phi) * Math.sin(theta);
+        
+        positions.push(x, y, z);
+        
+        // 渐变颜色：底部白色 -> 顶部愿望颜色
+        const normalizedY = (y / radius + 1) / 2; // 0 = 底部, 1 = 顶部
+        tempColor.copy(cBottom).lerp(cTop, normalizedY);
+        colors.push(tempColor.r, tempColor.g, tempColor.b);
+        
+        // Animation attributes
+        randoms.push(Math.random(), Math.random(), Math.random());
+        
+        // Scale: 中间大，两极小
+        const distFromEquator = Math.abs(y / radius);
+        const sizeBase = 1.5 - distFromEquator * 0.8;
+        scales.push(sizeBase * (0.8 + Math.random() * 0.4));
+        
+        // Word index
+        const wIdx = Math.floor(Math.random() * uniqueWords.length);
+        wordIndexes.push(wIdx);
+      }
     }
 
     return {

@@ -2,7 +2,6 @@ import React, { Suspense, useState, useCallback, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Experience } from './components/Experience';
 import { Overlay } from './components/Overlay';
-import { WishUI } from './components/WishUI';
 import { useWishStore } from './store';
 
 export default function App() {
@@ -45,7 +44,7 @@ export default function App() {
             dpr={[1, 2]}
             camera={{ position: [0, 5, 35], fov: 45 }}
             gl={{ antialias: false, alpha: false }}
-            resize={{ debounce: 0 }} // Smooth resize
+            resize={{ debounce: 0 }}
           >
             <color attach="background" args={['#050505']} />
             <Suspense fallback={null}>
@@ -53,10 +52,9 @@ export default function App() {
             </Suspense>
           </Canvas>
           
-          {/* Only show the main UI overlays when NOT in split mode */}
+          {/* Only show the main UI overlay when NOT in split mode */}
           <div className={`transition-opacity duration-500 ${isSplit ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <Overlay onRegrow={handleRegrow} />
-            <WishUI />
           </div>
         </div>
 

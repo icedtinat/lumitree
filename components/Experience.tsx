@@ -1,13 +1,10 @@
-
 import React, { useRef } from 'react';
 import { CameraControls, PerspectiveCamera } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { useFrame } from '@react-three/fiber';
 import { ParticleTree } from './ParticleTree';
 import { WishSphere } from './WishSphere';
-import { LuxBall } from './LuxBall';
 import { useWishStore } from '../store';
-import * as THREE from 'three';
 
 interface ExperienceProps {
   triggerGrow: number;
@@ -19,7 +16,6 @@ export const Experience: React.FC<ExperienceProps> = ({ triggerGrow }) => {
   const isInteracting = useRef(false);
 
   // Custom Auto-Rotate Logic
-  // We manually rotate the camera azimuth when the user is not interacting.
   useFrame((state, delta) => {
     if (controlsRef.current && !isInteracting.current) {
       const azimuthAngle = controlsRef.current.azimuthAngle;
@@ -37,7 +33,7 @@ export const Experience: React.FC<ExperienceProps> = ({ triggerGrow }) => {
         maxPolarAngle={Math.PI / 1.8}
         minDistance={2}
         maxDistance={50}
-        dollyToCursor={true} // Enabled: Zoom towards the mouse pointer
+        dollyToCursor={true}
         onStart={() => { isInteracting.current = true; }}
         onEnd={() => { isInteracting.current = false; }}
       />
@@ -47,30 +43,15 @@ export const Experience: React.FC<ExperienceProps> = ({ triggerGrow }) => {
       <group position={[0, -8, 0]}>
         <ParticleTree key={triggerGrow} />
         
-        {wishes.map((wish) => {
-          // Conditional Rendering based on Vessel selection
-          if (wish.vessel === 'Cookie') {
-            return (
-              <LuxBall
-                key={wish.id}
-                id={wish.id}
-                text={wish.text}
-                color={wish.color}
-                position={wish.position}
-              />
-            );
-          }
-          // Default to WishSphere for other vessels
-          return (
-            <WishSphere 
-              key={wish.id}
-              id={wish.id}
-              text={wish.text}
-              color={wish.color}
-              position={wish.position}
-            />
-          );
-        })}
+        {wishes.map((wish) => (
+          <WishSphere 
+            key={wish.id}
+            id={wish.id}
+            text={wish.text}
+            color={wish.color}
+            position={wish.position}
+          />
+        ))}
       </group>
 
       <EffectComposer enableNormalPass={false}>
